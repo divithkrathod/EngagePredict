@@ -1,59 +1,74 @@
 # Machine Learning Implementation in EngagePredict
 
-The EngagePredict project leverages a robust Machine Learning pipeline to analyze user behavior, predict engagement tiers, and forecast churn probability. This document details the step-by-step implementation of the ML models within our system.
+The EngagePredict project leverages a highly optimized ensemble Machine Learning pipeline to predict social media post engagement. This document details the step-by-step implementation of the ML models driving the core `ml-service`.
 
 ## Overview
 
-The core of our ML predictive engine is implemented in `train_models.py` and relies on a combination of unsupervised and supervised learning algorithms to extract insights from the `engage_predict_dataset.csv`.
+Unlike simpler regression models, EngagePredict uses an **Ensemble Learning** approach in our FastAPI ML Service (`ml-service/inference.py`). It analyzes content parameters and platform-specific data to categorize the likelihood of engagement success into `Low`, `Medium`, or `High` tiers, mapping these to a 0-100 optimization scale.
 
-The ML workflow operates in five main stages:
-1. Data Preprocessing
-2. Dimensionality Reduction
-3. User Segmentation
-4. Engagement Tier Classification
-5. Churn Probability Regression
+The prediction engine relies on three supervised learning algorithms that vote on the final outcome:
+1. **Multiclass Logistic Regression** (30% weight)
+2. **Random Forest Classifier** (40% weight)
+3. **K-Nearest Neighbors (KNN)** (30% weight)
 
 ---
 
-## 1. Data Preprocessing
+## 1. Feature Extraction Pipeline
 
-Before feeding data into the models, it must be cleaned and standardized. We use two primary transformers from `scikit-learn`:
+Before reaching the ML models, the raw input (caption text, hashtags, timestamps, platform, and media data) is mathematically mapped into a 14-dimensional feature vector.
 
-- **Label Encoding**: The `LabelEncoder` is used to convert categorical features (like `device_type`) into numerical format so that the algorithms can process them.
-- **Feature Scaling**: We apply the `StandardScaler` to standardize the features by removing the mean and scaling to unit variance. This step is critical because algorithms like PCA and K-Means are distance-based and highly sensitive to unscaled data.
+The 14 features extracted are:
+- `caption_length`: Raw character count of the caption.
+- `hashtag_count`: Total number of hashtags used.
+- `hour`: The hour of posting.
+- `is_peak`: A boolean (0 or 1) indicating if the time matches the platform's peak hours.
+- `is_best_day`: A boolean indicating if the day of week is optimal for the platform.
+- `resolution_score`: A scaled value for media resolution (e.g., SD, 1080p, 4K).
+- `orientation_match`: A boolean for whether media orientation matches platform preferences (e.g., Portrait for TikTok).
+- `media_quality`: An encoded score reflecting estimated media depth (Low, Medium, High).
+- `platform_encoded`: Integer representation of the targeted platform (Instagram, TikTok, YouTube, Twitter, Facebook).
+- `has_location`: Boolean representing geolocation tagging.
+- `has_cta`: Boolean for the presence of Call-To-Action words (e.g., "like", "share", "comment").
+- `has_emoji`: Boolean for emoji presence.
+- `hashtag_ratio`: The ratio of hashtags used against the maximum optimal amount.
+- `caption_ratio`: The ratio of caption length against the optimal length.
 
-## 2. Dimensionality Reduction (PCA)
+## 2. Advanced Preprocessing
 
-We implement **Principal Component Analysis (PCA)** to reduce the complexity of the dataset while retaining the majority of its variance. 
+The 14-feature array is mathematically standardized via a **Scikit-Learn StandardScaler**.
+Scaling transforms the variables so they have a mean of 0 and unity variance. This is critically important for the **KNN (K-Nearest Neighbors)** and **Logistic Regression** models, which calculate distances and gradients that would otherwise be distorted by larger numerical values (like caption character lengths).
 
-- **Implementation**: The data is reduced down to 3 principal components (`n_components=3`). 
-- **Purpose**: This reduces the computational overhead, helps in noise reduction, and significantly accelerates the training of downstream models without sacrificing critical information.
+## 3. The ML Ensemble 
 
-## 3. User Segmentation (K-Means Clustering)
+Instead of relying on a single algorithm, the system passes the scaled features to three completely different model architectures:
 
-To understand user behavior patterns organically, an unsupervised learning approach is utilized.
+### A. Random Forest Classifier (40% Voting Weight)
+- **Role**: Our primary predictor. Uses an ensemble of decision trees.
+- **Why**: Excellent at capturing complex, non-linear relationships (e.g., the combination of TikTok + 8 PM + Portrait orientation + short caption). It's naturally robust against overfitting.
 
-- **Implementation**: We employ the **K-Means** algorithm (`n_clusters=3`) on the PCA-reduced features.
-- **Purpose**: This segments the user base into distinct behavioral groups (clusters). These clusters provide valuable insights into distinct user personas, which can be utilized for targeted marketing or tailored recommendations.
+### B. Multiclass Logistic Regression (30% Voting Weight)
+- **Role**: The baseline linear probabilistic model.
+- **Why**: Provides a highly interpretable benchmark and smooths out the variance of the Random Forest. It essentially determines the baseline probability based on linear correlations of features.
 
-## 4. Engagement Tier Classification (Random Forest)
+### C. K-Nearest Neighbors (KNN) (30% Voting Weight)
+- **Role**: Instance-based learning model.
+- **Why**: Predicts engagement by finding the most mathematically "similar" historical posts in our dataset. If a new post is almost identical to highly-engaged previous posts, KNN will flag it.
 
-To predict how engaged a user will be (categorized into tiers such as Low, Medium, High), we use a supervised classification model.
+## 4. Final Prediction & Scoring
 
-- **Implementation**: A **Random Forest Classifier** is trained using the PCA-reduced data as inputs and the `engagement_tier` as the target variable.
-- **Purpose**: Random forests are robust against overfitting and capable of capturing complex, non-linear relationships. It serves as the primary predictive engine for determining a user's engagement level on the platform.
+Each model outputs an array of probabilities for each class (`Low`, `Medium`, `High`).
 
-## 5. Churn Probability Regression (XGBoost)
+1. **Weighted Voting**: We combine the probability arrays using the 40/30/30 weights.
+2. **Classification**: The class with the highest combined probability becomes the predicted `EngagementLevel`.
+3. **Score Mapping**: The resulting probabilities are mathematically mapped back onto a 0-100 scale:
+   - Low baseline = `0-49`
+   - Medium baseline = `50-74`
+   - High baseline = `75-100`
 
-Alongside predicting engagement, the system forecasts the likelihood of a user abandoning the platform (churn).
+## 5. Deployment Architecture 
 
-- **Implementation**: We use an **XGBoost Regressor** (`objective='reg:squarederror'`) trained on the same PCA features, with the target being `churn_probability`.
-- **Purpose**: XGBoost (Extreme Gradient Boosting) is highly efficient and provides state-of-the-art predictive performance for tabular data. It gives us a continuous output indicating the exact probability of user churn, enabling proactive retention strategies.
+- All models are trained via `ml-service/train_models.py` on synthesized historical data.
+- The models, scaler, and label encoder are exported via `pickle` into the `ml-service/models/` directory.
+- During runtime, the FastAPI server efficiently loads the `.pkl` files into memory once on startup to provide sub-millisecond, low-latency API inference.
 
----
-
-## Model Pipeline & Persistence
-
-Once the entire pipeline is trained:
-1. **Serialization**: The fitted standard scaler, PCA transformer, K-Means model, Random Forest classifier, and XGBoost regressor are explicitly saved using `joblib` into the `models/` directory.
-2. **Inference**: During production inference (inside the `ml-service`), these pre-trained components are loaded into memory. When new user data arrives, the exact same preprocessing and PCA transformations are applied before passing it to the predictive models for real-time predictions.
+*(Note: Earlier theoretical implementations exploring automated PCA and K-Means clustering are preserved in the root `train_models.py` as legacy data analysis scripts.)*

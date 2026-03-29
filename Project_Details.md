@@ -16,30 +16,27 @@ The project utilizes a custom synthesized dataset named `engage_predict_dataset.
 - **Target Variables for ML:** `engagement_tier` (Low/Medium/High) and `churn_probability` (0.01 to 0.95).
 
 ## How are the ML Models Used and What are they Doing?
-The system architecture follows a structured, sequential predictive pipeline. The ML models act together to transform raw interaction logs into actionable engagement scores:
+The system architecture follows a structured, multi-model ensemble predictive pipeline. The ML models act together to transform raw content parameters and media data into actionable engagement scores:
 
-1. **Dimensionality Reduction (PCA):** 
-   - *What it does:* Condenses hundreds of user interaction metrics (clicks, time spent) into the most critical mathematical signals.
-   - *How it is used:* Removes noise from the dataset so the predictive models run faster and more accurately.
-2. **User Segmentation (K-Means Clustering - Unsupervised):**
-   - *What it does:* Analyzes the PCA patterns and groups users into behavioral clusters (e.g., 'Power Users', 'At-Risk Users') without any human labels.
-   - *How it is used:* Provides an overarching category for each user before attempting to predict specific outcomes.
-3. **Core Predictive Engines (Supervised Learning):**
-   - *What they do:* They learn explicitly from historical data. They look at users who previously had high engagement or churned, memorize their behavioral patterns, and apply those patterns to guess behavior in new users.
-   - *How they are used:* They generate the final predictive metrics (Categorical Engagement Tier and Numerical Churn Probability) which platform administrators can use to intervene.
+1. **Feature Extraction & Scaling:**
+   - *What it does:* Condenses textual parameters (caption length, hashtags), categorical data (platform, day), and media values (resolution, orientation) into a clean 14-dimensional numerical array.
+   - *How it is used:* Provides mathematically normalized values so algorithms can interpret diverse data points equally.
+2. **Core Predictive Engines (Ensemble Learning - Supervised):**
+   - *What they do:* Three different supervised machine learning architectures independently evaluate the scaled features. They look at historical synthetic data where engagement was known, memorize those multifaceted patterns, and individually calculate the probability of success for new content.
+   - *How they are used:* Their independent outputs are combined using a weighted voting system to produce highly robust, consensus-driven predictive metrics (e.g., 'High' Engagement Level and an overarching 0-100 Score).
 
 ## ML Supervised Learning Techniques Used
-This project heavily utilizes two primary Supervised Learning techniques for its core predictive engine:
-1. **Classification (Random Forest Classifier):** A technique used to categorize data into discrete buckets. Here, Random Forest uses an ensemble of dozens of decision trees to classify users into distinct tiers: *Low, Medium, or High* engagement.
-2. **Regression (XGBoost Regressor):** A technique used to forecast exact numerical values. Here, Extreme Gradient Boosting (XGBoost) evaluates behavior to predict continuous variables, specifically the numerical *Churn Probability* percentage (e.g., 75% likely to churn).
+This project heavily utilizes an Ensemble System featuring three primary Supervised Learning techniques for its core predictive engine:
+1. **Classification (Random Forest Classifier):** A technique used to categorize data into discrete buckets. Here, Random Forest uses an ensemble of dozens of decision trees to classify the engagement potential, carrying a 40% voting weight natively.
+2. **Multiclass Logistic Regression:** A foundational statistical model offering a highly interpretable baseline probability based on linear correlations of features. It carries a 30% voting weight.
+3. **K-Nearest Neighbors (KNN):** An instance-based learning algorithm that groups new content with the most mathematically "similar" historical posts to derive its engagement class. It carries the remaining 30% voting weight.
 
 ## Methodology
-1. **Data Collection:** Gathering behavioral data from user sessions.
-2. **Data Preprocessing & PCA:** Cleaning the data, handling missing information, and reducing dimensionality.
-3. **User Segmentation:** Using K-Means to find natural behavioral groupings.
-4. **Model Training:** Training Random Forest and XGBoost models on the segmented data.
-5. **Evaluation:** Testing the models to ensure their predictions are accurate.
-6. **Output Prediction:** Generating the final engagement score.
+1. **Data Generation:** Creating synthetic training data with realistic engagement patterns.
+2. **Feature Extraction:** Processing user inputs to extract 14 relevant core features.
+3. **Model Training:** Training individual ML models (Logistic Regression, Random Forest, KNN) on the synthetic dataset.
+4. **Ensemble Prediction:** Combining model predictions using weighted voting.
+5. **Recommendation Generation:** Providing personal platform-specific tips based on prediction results and best practices.
 
 ## How to Run This Project
 Follow these simple execution steps to demonstrate the pipeline on your machine:
