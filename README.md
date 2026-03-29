@@ -17,7 +17,6 @@ A full-stack web application that predicts social media post engagement using ML
 - **💡 Actionable Feedback** - Platform-specific recommendations to boost reach
 - **📊 History Tracking** - Track your content improvements over time
 - **🔐 Secure Auth** - Firebase Authentication with JWT
-- **📱 Mobile-First** - Responsive "Luxury Tech" design
 
 ## 🛠️ Tech Stack
 
@@ -114,10 +113,6 @@ The UI follows a **"Luxury Tech"** aesthetic:
 - **Typography**: Inter (body), Libre Baskerville (brand)
 - **Components**: Glass cards, soft shadows, rounded corners (20-24px)
 - **Animations**: Micro-interactions, shimmer effects, gauge animations
-
-## 📱 Screenshots
-
-*(Add your screenshots here after running the app)*
 
 ## 🔧 API Endpoints
 
